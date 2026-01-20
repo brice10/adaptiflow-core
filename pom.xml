@@ -1,49 +1,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>io.github.brice10</groupId>
 	<artifactId>adaptiflow</artifactId>
-	<version>0.0.1</version>
+	<groupId>tools.spirals.cerberus237</groupId>
 	<packaging>jar</packaging>
-	<name>AdaptiFlow</name>
-	<description>AdaptiFlow: an Extensible Framework for Event-Driven Autonomy in Cloud Microservices</description>
-	<url>https://github.com/brice10/adaptiflow</url>
-
+	<name>Adaptable TeaStore Adaptation Lib</name>
+	<url>http://descartes.tools</url>
 	<properties>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<slf4j.version>2.0.0</slf4j.version>
 	</properties>
-
-	<licenses>
-		<license>
-			<name>Apache License, Version 2.0</name>
-			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
-
-	<scm>
-		<connection>scm:git:git://github.com/brice10/adaptiflow.git</connection>
-		<developerConnection>scm:git:ssh://github.com/brice10/adaptiflow.git</developerConnection>
-		<url>http://github.com/brice10/adaptiflow/tree/main</url>
-	</scm>
-
-	 <developers>
-		<developer>
-			<name>Cerberus237</name>
-			<email>arleonzemtsop@gmail.com</email>
-			<organization>University of Lille</organization>
-			<organizationUrl>https://www.univ-lille.fr/</organizationUrl>
-		</developer>
-	</developers>
-
 	<dependencies>
 		<!-- Internal Dependencies -->
 		<dependency>
-			<groupId>io.github.brice10</groupId>
+			<groupId>tools.spirals.cerberus237</groupId>
 			<artifactId>metricscollectorbase</artifactId>
-			<version>0.0.1</version>
+			<version>${teastoreversion}</version>
 		</dependency>
 
 		<!-- JavaEE Dependencies -->
@@ -82,7 +54,7 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>io.github.brice10.adaptiflow</finalName>
+		<finalName>tools.spirals.cerberus237.adaptiflow</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -93,55 +65,12 @@
 					<forkCount>1</forkCount>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<version>3.4.0</version>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<goals>
-							<goal>jar-no-fork</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.12.0</version>
-				<executions>
-					<execution>
-						<id>attach-javadocs</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-gpg-plugin</artifactId>
-				<version>3.2.8</version>
-				<executions>
-					<execution>
-						<id>sign-artifacts</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.sonatype.central</groupId>
-				<artifactId>central-publishing-maven-plugin</artifactId>
-				<version>0.10.0</version>
-				<extensions>true</extensions>
-				<configuration>
-					<publishingServerId>central</publishingServerId>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
+	<parent>
+		<groupId>tools.descartes.teastore</groupId>
+		<artifactId>parent</artifactId>
+		<version>${teastoreversion}</version>
+		<relativePath>../..</relativePath>
+	</parent>
 </project>

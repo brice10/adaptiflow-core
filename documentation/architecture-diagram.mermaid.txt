@@ -1,9 +1,8 @@
-flowchart TB
+flowchart TD
     %% Define multiple autonomic elements interacting
     AE1_node[Autonomic Element 1]
 
     subgraph AE2_sub[Autonomic Element 2]
-      direction TB
       AM1["Autonomic Manager with Adaptiflow specification"]
       ME1[Managed Element]
       AM1 --> ME1
@@ -11,7 +10,6 @@ flowchart TB
     end
 
     subgraph AE3_sub[Autonomic Element 3]
-      direction TB
       AM2["Autonomic Manager with Adaptiflow specification"]
       ME2[Managed Element]
       AM2 --> ME2
@@ -46,7 +44,7 @@ flowchart TB
 
         %% Internal connections
         ES -->|Start Observations Scheduling| EM
-        EM <--> |Collect Metrics| MC
+        MC --> |Collect Metrics| EM
         EM -->|Dual Condition Evaluation| CE
         EM -- Notify --> SUB
         SUB -- Execute adaptation actions --> AA

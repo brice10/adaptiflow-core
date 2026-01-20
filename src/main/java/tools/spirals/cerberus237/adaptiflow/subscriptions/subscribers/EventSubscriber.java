@@ -1,16 +1,3 @@
-/**
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package tools.spirals.cerberus237.adaptiflow.subscriptions.subscribers;
 
 import org.slf4j.Logger;
@@ -24,54 +11,109 @@ import java.util.List;
 /**
  * The {@link EventSubscriber} class is a concrete implementation of the
  * {@link AbstractEventSubscriber} that reacts to updates from observable objects.
- * <p>
- * This class utilizes a list of adaptation actions and a condition evaluator
- * to determine when to perform actions based on the received metrics.
- * </p>
- *
- * @param <T> the type of data that this subscriber will work with.
- * @author Arléon Zemtsop (Cerberus)
+ * Enhanced with performance logging for action execution.
  */
 public class EventSubscriber<T> extends AbstractEventSubscriber<T> {
     private static final Logger LOG = LoggerFactory.getLogger(EventSubscriber.class);
 
-    /**
-     * Constructs an {@code EventSubscriber} with the specified actions
-     * and condition evaluator.
-     *
-     * @param actions a list of adaptation actions to be executed.
-     * @param conditionEvaluator the condition evaluator that determines when
-     *                           the actions should be performed.
-     */
-    public EventSubscriber(List<IAdaptationAction> actions,
-                           ConditionEvaluator<T> conditionEvaluator) {
+    private String subscriberId;
+    private String serviceName;
+
+    public EventSubscriber(List<IAdaptationAction> actions, ConditionEvaluator<T> conditionEvaluator) {
         super(actions, conditionEvaluator);
-        this.conditionEvaluator = conditionEvaluator;
+        this.subscriberId = generateSubscriberId();
     }
 
-    /**
-     * Constructs an {@code EventSubscriber} with the specified actions
-     * and a default condition evaluator that always returns true.
-     *
-     * @param actions a list of adaptation actions to be executed.
-     */
     public EventSubscriber(List<IAdaptationAction> actions) {
         super(actions, new TrueEvaluator<>());
+        this.subscriberId = generateSubscriberId();
     }
 
-    /**
-     * Updates the subscriber with a new metric value and a message.
-     * <p>
-     * This method prints the message and the metric value, and then
-     * performs all the adaptation actions if the conditions are met.
-     * </p>
-     *
-     * @param metricValue the new metric value to be evaluated.
-     * @param message a message indicating the context of the update.
-     */
-    @Override
-    public void update(T metricValue, String message) {
-        LOG.info("{}: {}", message, metricValue);
-        actions.forEach(IAdaptationAction::perform);
+    public EventSubscriber(String serviceName, List<IAdaptationAction> actions) {
+        super(actions, new TrueEvaluator<>());
+        this.serviceName = serviceName;
+        this.subscriberId = generateSubscriberId();
     }
+
+    public EventSubscriber(String serviceName, List<IAdaptationAction> actions,
+                           ConditionEvaluator<T> conditionEvaluator) {
+        super(actions, conditionEvaluator);
+        this.serviceName = serviceName;
+        this.subscriberId = generateSubscriberId();
+    }
+
+    public void update(T metricValue, String message) { update(metricValue, message, null); }
+
+    @Override
+    public void update(T metricValue, String message, String cycleId) {
+        long updateStartTime = System.nanoTime();
+        if (cycleId == null) cycleId = "unknown-cycle";
+
+        // Existing: SUBSCRIBER_UPDATE_START
+        LOG.info("SUBSCRIBER_UPDATE_START|cycleId={}|subscriberId={}|service={}|message={}|actionsCount={}|startTime={}",
+                cycleId, subscriberId, serviceName, message, actions.size(), updateStartTime);
+
+
+        // Optional context (does not affect parser)
+        LOG.info("SUBSCRIBER_METRIC_RECEIVED|cycleId={}|subscriberId={}|service={}|metric={}",
+                cycleId, subscriberId, serviceName, metricValue);
+
+        int successfulActions = 0;
+        int failedActions = 0;
+
+        for (int i = 0; i < actions.size(); i++) {
+            IAdaptationAction action = actions.get(i);
+            long actionStartTime = System.nanoTime();
+
+            // NEW (safe): action marker for chart annotation
+            LOG.info("ACTION_MARKER|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|marker=ACTION_START|timestamp={}",
+                    cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionStartTime);
+
+            try {
+                // Existing: ACTION_EXECUTION_START (not parsed by your script but harmless)
+                LOG.info("ACTION_EXECUTION_START|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|startTime={}",
+                        cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionStartTime);
+
+                action.perform();
+
+                long actionEndTime = System.nanoTime();
+                long actionLatency = actionEndTime - actionStartTime;
+                successfulActions++;
+
+                // Existing: ACTION_EXECUTION_COMPLETE
+                LOG.info("ACTION_EXECUTION_COMPLETE|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|latencyNs={}|endTime={}|metric={}",
+                        cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionLatency, actionEndTime, metricValue);
+
+                // NEW (safe): action marker end
+                LOG.info("ACTION_MARKER|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|marker=ACTION_END|timestamp={}",
+                        cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionEndTime);
+
+            } catch (Exception e) {
+                long actionEndTime = System.nanoTime();
+                long actionLatency = actionEndTime - actionStartTime;
+                failedActions++;
+
+                LOG.error("ACTION_EXECUTION_FAILED|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|latencyNs={}|error={}",
+                        cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionLatency, e.getMessage(), e);
+
+                // NEW (safe): failed action marker
+                LOG.info("ACTION_MARKER|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|marker=ACTION_FAILED|timestamp={}",
+                        cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionEndTime);
+            }
+        }
+
+        long updateEndTime = System.nanoTime();
+        long totalUpdateLatency = updateEndTime - updateStartTime;
+
+        // Existing: SUBSCRIBER_UPDATE_COMPLETE
+        LOG.info("SUBSCRIBER_UPDATE_COMPLETE|cycleId={}|subscriberId={}|service={}|successfulActions={}|failedActions={}|totalLatencyNs={}|endTime={}",
+                cycleId, subscriberId, serviceName, successfulActions, failedActions, totalUpdateLatency, updateEndTime);
+
+    }
+
+    private String generateSubscriberId() { return "subscriber-" + System.currentTimeMillis() + "-" + hashCode(); }
+
+    public String getSubscriberId() { return subscriberId; }
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
 }

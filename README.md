@@ -14,13 +14,12 @@ This documentation provides a comprehensive explanation of the proposed system, 
     - [Available Collectors](#31-available-collectors)
     - [Usage Examples](#32-usage-examples)
     - [REST API Endpoints for Metrics Collection](#33-rest-api-endpoints-for-metrics-collection)
-4. [Scenario Overview](SCENARIOS_OVERVIEW.md)
-5. [Adaptation Actions]( #4-adaptation-actions)
+4. [Adaptation Actions]( #4-adaptation-actions)
    - [Available Adaptation Actions](#41-available-adaptation-actions)
    - [Usage Example: Preventing an Authentication Attack](#42-usage-example-preventing-an-authentication-attack)
    - [REST API Endpoints for Adaptation Actions](#43-rest-api-endpoints-for-adaptation-actions)
-6. [Applications](#5-applications)
-7. [Conclusion](#6-conclusion)
+5. [Applications](#5-applications)
+6. [Conclusion](#6-conclusion)
 
 ---
 
@@ -36,11 +35,10 @@ The proposed system is designed to dynamically respond to changing conditions us
 ---
 
 ## 2. Architecture Overview
-![Architecture Diagram](documentation/architecture-diagram.png "Architecture diagram")
 
 ### 2.1 Component Diagram
 
-![Component Diagram](documentation/component-diagram.png  "Component Diagram")
+![Component Diagram](documentation/Adaptation Library Component Diagram-2025-01-22-105402.png "Component Diagram")
 
 The component diagram provides a high-level view of the system's components and their interactions. The main components include:
 

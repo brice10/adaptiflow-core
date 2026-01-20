@@ -94,4 +94,14 @@ public interface Observable<T> {
      * @param metricValue the new metric value to be sent to the observer.
      */
     void notifyObserver(Observer<T> subscriber, T metricValue);
+
+    /**
+     * For evaluation
+     * @param subscriber
+     * @param metricValue
+     * @param cycleId
+     * @param notificationStartTime
+     */
+    void notifyObserver(Observer<T> subscriber, T metricValue, String cycleId, long notificationStartTime);
+
 }

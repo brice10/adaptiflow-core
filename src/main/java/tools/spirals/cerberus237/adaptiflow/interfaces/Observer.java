@@ -49,4 +49,12 @@ public interface Observer<T> {
      * @return the condition evaluator for this observer.
      */
     ConditionEvaluator<T> getConditionEvaluator();
+
+    /**
+     * For evaluation
+     * @param metricValue
+     * @param message
+     * @param cycleId
+     */
+    void update(T metricValue, String message, String cycleId);
 }

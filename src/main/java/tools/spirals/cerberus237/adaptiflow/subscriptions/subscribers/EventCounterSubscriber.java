@@ -1,16 +1,3 @@
-/**
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package tools.spirals.cerberus237.adaptiflow.subscriptions.subscribers;
 
 import org.slf4j.Logger;
@@ -25,80 +12,114 @@ import java.util.List;
  * The {@link EventCounterSubscriber} class is a concrete implementation of the
  * {@link AbstractEventSubscriber} that triggers adaptation actions based on a
  * specified counting cycle.
- * <p>
- * This class counts the number of updates received and performs the actions
- * only when the count reaches a predefined cycle.
- * </p>
- *
- * @param <T> the type of data that this subscriber will work with.
- * @author Arléon Zemtsop (Cerberus)
+ * Enhanced with performance logging and cycle counting metrics.
  */
 public class EventCounterSubscriber<T> extends AbstractEventSubscriber<T> {
     private static final Logger LOG = LoggerFactory.getLogger(EventCounterSubscriber.class);
 
-    /**
-     * The cycle count after which actions will be performed.
-     */
     private final int cycle;
-
-    /**
-     * The current count of received updates.
-     */
     private int counter = 0;
+    private String subscriberId;
+    private String serviceName;
 
-    /**
-     * Constructs an {@code EventCounterSubscriber} with the specified actions,
-     * condition evaluator, and cycle count.
-     *
-     * @param actions a list of adaptation actions to be executed.
-     * @param conditionEvaluator the condition evaluator that determines when
-     *                           the actions should be performed.
-     * @param cycle the number of updates to count before performing actions.
-     */
-    public EventCounterSubscriber(List<IAdaptationAction> actions,
-                                  ConditionEvaluator<T> conditionEvaluator,
-                                  int cycle) {
+    public EventCounterSubscriber(List<IAdaptationAction> actions, ConditionEvaluator<T> conditionEvaluator, int cycle) {
         super(actions, conditionEvaluator);
         this.cycle = cycle;
+        this.subscriberId = generateSubscriberId();
     }
 
-    /**
-     * Constructs an {@code EventCounterSubscriber} with the specified actions
-     * and a default condition evaluator that always returns true.
-     *
-     * @param actions a list of adaptation actions to be executed.
-     */
     public EventCounterSubscriber(List<IAdaptationAction> actions, int cycle) {
         super(actions, new TrueEvaluator<>());
         this.cycle = cycle;
+        this.subscriberId = generateSubscriberId();
     }
 
-    /**
-     * Updates the subscriber with a new metric value and a message.
-     * <p>
-     * This method increments the counter and checks if it has reached the cycle limit.
-     * If so, it prints the message, performs the adaptation actions, and resets the counter.
-     * </p>
-     *
-     * @param metricValue the new metric value to be evaluated.
-     * @param message a message indicating the context of the update.
-     */
+    public EventCounterSubscriber(String serviceName, List<IAdaptationAction> actions,
+                                  ConditionEvaluator<T> conditionEvaluator, int cycle) {
+        super(actions, conditionEvaluator);
+        this.serviceName = serviceName;
+        this.cycle = cycle;
+        this.subscriberId = generateSubscriberId();
+    }
+
+    public void update(T metricValue, String message) { update(metricValue, message, null); }
+
     @Override
-    public void update(T metricValue, String message) {
+    public void update(T metricValue, String message, String cycleId) {
+        long updateStartTime = System.nanoTime();
         counter++;
+        if (cycleId == null) cycleId = "unknown-cycle";
+
+        // Existing: COUNTER_SUBSCRIBER_UPDATE
+        LOG.info("COUNTER_SUBSCRIBER_UPDATE|cycleId={}|subscriberId={}|service={}|currentCount={}|targetCount={}|message={}|startTime={}",
+                cycleId, subscriberId, serviceName, counter, cycle, message, updateStartTime);
+
         if (counter >= cycle) {
-            LOG.info("{}: {}", message, metricValue);
-            actions.forEach(IAdaptationAction::perform);
-            counter = 0; // Reset the counter after actions are performed
+            LOG.info("CYCLE_THRESHOLD_REACHED|cycleId={}|subscriberId={}|service={}|count={}|startTime={}",
+                    cycleId, subscriberId, serviceName, counter, System.nanoTime());
+
+            int successfulActions = 0;
+            int failedActions = 0;
+
+            for (int i = 0; i < actions.size(); i++) {
+                IAdaptationAction action = actions.get(i);
+                long actionStartTime = System.nanoTime();
+
+                // NEW (safe): action marker
+                LOG.info("ACTION_MARKER|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|marker=ACTION_START|timestamp={}",
+                        cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionStartTime);
+
+                try {
+                    LOG.info("COUNTER_ACTION_EXECUTION_START|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|startTime={}",
+                            cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionStartTime);
+
+                    action.perform();
+
+                    long actionEndTime = System.nanoTime();
+                    long actionLatency = actionEndTime - actionStartTime;
+                    successfulActions++;
+
+                    // Existing: COUNTER_ACTION_EXECUTION_COMPLETE
+                    LOG.info("COUNTER_ACTION_EXECUTION_COMPLETE|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|latencyNs={}|metric={}",
+                            cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionLatency, metricValue);
+
+                    // NEW (safe): action end marker
+                    LOG.info("ACTION_MARKER|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|marker=ACTION_END|timestamp={}",
+                            cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionEndTime);
+
+                } catch (Exception e) {
+                    long actionEndTime = System.nanoTime();
+                    long actionLatency = actionEndTime - actionStartTime;
+                    failedActions++;
+
+                    LOG.error("COUNTER_ACTION_EXECUTION_FAILED|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|latencyNs={}|error={}",
+                            cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionLatency, e.getMessage(), e);
+
+                    LOG.info("ACTION_MARKER|cycleId={}|subscriberId={}|service={}|actionIndex={}|actionClass={}|marker=ACTION_FAILED|timestamp={}",
+                            cycleId, subscriberId, serviceName, i, action.getClass().getSimpleName(), actionEndTime);
+                }
+            }
+
+            counter = 0; // reset
+            long updateEndTime = System.nanoTime();
+            long totalUpdateLatency = updateEndTime - updateStartTime;
+
+            // Existing: COUNTER_SUBSCRIBER_CYCLE_COMPLETE
+            LOG.info("COUNTER_SUBSCRIBER_CYCLE_COMPLETE|cycleId={}|subscriberId={}|service={}|successfulActions={}|failedActions={}|totalLatencyNs={}",
+                    cycleId, subscriberId, serviceName, successfulActions, failedActions, totalUpdateLatency);
+
+        } else {
+            // Existing: CYCLE_THRESHOLD_NOT_REACHED
+            LOG.info("CYCLE_THRESHOLD_NOT_REACHED|cycleId={}|subscriberId={}|service={}|currentCount={}|targetCount={}",
+                    cycleId, subscriberId, serviceName, counter, cycle);
         }
     }
 
-    /**
-     * Retrieves the current counter value.
-     *
-     * @return the current count of updates received since the last action was performed.
-     */
-    public int getCounter() {
-        return counter;
-    }
+    public int getCounter() { return counter; }
+
+    private String generateSubscriberId() { return "counter-subscriber-" + System.currentTimeMillis() + "-" + hashCode(); }
+
+    public String getSubscriberId() { return subscriberId; }
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
 }

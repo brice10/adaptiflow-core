@@ -58,7 +58,6 @@ public class EventTest {
             notifiedValues.add(metricValue);
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public ConditionEvaluator<T> getConditionEvaluator() {
             return (ConditionEvaluator<T>) new GreaterThanEvaluator<>(50.0);

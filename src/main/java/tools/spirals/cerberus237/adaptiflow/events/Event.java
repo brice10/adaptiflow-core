@@ -1,18 +1,8 @@
-/**
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package tools.spirals.cerberus237.adaptiflow.events;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tools.spirals.cerberus237.adaptiflow.context.AdaptationCycleContext;
 import tools.spirals.cerberus237.adaptiflow.interfaces.Observable;
 import tools.spirals.cerberus237.adaptiflow.interfaces.Observer;
 import tools.spirals.cerberus237.metricscollectorbase.IMetricsCollector;
@@ -34,154 +24,145 @@ import java.util.List;
  */
 public class Event<T> implements Observable<T> {
 
-    /**
-     * Event name.
-     */
+    private static final Logger LOG = LoggerFactory.getLogger(Event.class);
+
     protected String name;
+    protected String serviceName;
 
-    /**
-     * A list of observers subscribed to this event.
-     */
     protected final List<Observer<T>> subscribers = new ArrayList<>();
-
-    /**
-     * The metrics collector used to gather metric values for this event.
-     */
     protected final IMetricsCollector<T> collector;
 
-    /**
-     * Constructs an {@code Event} with the specified metrics collector.
-     *
-     * @param collector the metrics collector that gathers metric values for this event.
-     */
     public Event(IMetricsCollector<T> collector) {
         this.collector = collector;
     }
 
-    /**
-     * Constructs an {@code Event} with his name and the specified metrics collector.
-     *
-     * @param collector the metrics collector that gathers metric values for this event.
-     */
     public Event(String name, IMetricsCollector<T> collector) {
         this.name = name;
         this.collector = collector;
     }
 
-    /**
-     * Subscribes a single observer to this event.
-     * <p>
-     * This method adds the specified observer to the list of subscribers
-     * that will receive notifications when the event's metrics change.
-     * </p>
-     *
-     * @param subscriber the observer to be added to the subscription list.
-     */
-    @Override
-    public void subscribe(Observer<T> subscriber) {
-        subscribers.add(subscriber);
+    public Event(String serviceName, String name, IMetricsCollector<T> collector) {
+        this.serviceName = serviceName;
+        this.name = name;
+        this.collector = collector;
     }
 
-    /**
-     * Unsubscribes a single observer from this event.
-     * <p>
-     * This method removes the specified observer from the list of subscribers,
-     * preventing it from receiving further notifications about metric changes.
-     * </p>
-     *
-     * @param subscriber the observer to be removed from the subscription list.
-     */
     @Override
-    public void unsubscribe(Observer<T> subscriber) {
-        subscribers.remove(subscriber);
-    }
+    public void subscribe(Observer<T> subscriber) { subscribers.add(subscriber); }
+
+    @Override
+    public void unsubscribe(Observer<T> subscriber) { subscribers.remove(subscriber); }
+
+    @Override
+    public void subscribeAll(List<Observer<T>> subs) { subs.forEach(this::subscribe); }
+
+    @Override
+    public void unsubscribeAll(List<Observer<T>> subs) { subs.forEach(this::unsubscribe); }
 
     /**
-     * Subscribes multiple observers to this event.
-     * <p>
-     * This method adds all specified observers to the list of subscribers
-     * that will receive notifications when the event's metrics change.
-     * </p>
-     *
-     * @param subscribers a list of observers to be added to the subscription list.
-     */
-    @Override
-    public void subscribeAll(List<Observer<T>> subscribers) {
-        subscribers.forEach(this::subscribe);
-    }
-
-    /**
-     * Unsubscribes multiple observers from this event.
-     * <p>
-     * This method removes all specified observers from the list of subscribers,
-     * preventing them from receiving further notifications about metric changes.
-     * </p>
-     *
-     * @param subscribers a list of observers to be removed from the subscription list.
-     */
-    @Override
-    public void unsubscribeAll(List<Observer<T>> subscribers) {
-        subscribers.forEach(this::unsubscribe);
-    }
-
-    /**
-     * Observe metric changes and notifies observers if the conditions are met.
-     * <p>
-     * This method retrieves the current metric value from the collector and
-     * checks each observer's condition evaluator. If the condition is satisfied,
-     * the observer is notified with the current metric value.
-     * </p>
+     * Observe metric changes and notify observers if their conditions are met.
+     * Keeps existing log formats + adds harmless phase markers.
      */
     public void observe() {
-        T metric = collector.get();
-        for (Observer<T> observer : subscribers) {
-            if (observer.getConditionEvaluator().test(metric)) {
-                notifyObserver(observer, metric);
+        String cycleId = AdaptationCycleContext.generateCycleId(serviceName != null ? serviceName : "unknown-service");
+        AdaptationCycleContext.setCurrentCycle(cycleId);
+
+        try {
+            long collectionStartTime = System.nanoTime();
+
+            // Existing: ADAPTATION_CYCLE_START (kept for compatibility)
+            LOG.info("ADAPTATION_CYCLE_START|cycleId={}|event={}|service={}|timestamp={}",
+                    cycleId, name, serviceName, collectionStartTime);
+
+            // Detection / collection
+            T metric = collector.get();
+            long collectionEndTime = System.nanoTime();
+            long collectionLatency = collectionEndTime - collectionStartTime;
+
+            // Existing: METRICS_COLLECTION_COMPLETE
+            LOG.info("METRICS_COLLECTION_COMPLETE|cycleId={}|event={}|service={}|startTime={}|endTime={}|latencyNs={}",
+                    cycleId, name, serviceName, collectionStartTime, collectionEndTime, collectionLatency);
+
+
+            int notifiedSubscribers = 0;
+
+            for (Observer<T> observer : subscribers) {
+                long evaluationStartTime = System.nanoTime();
+                boolean conditionMet = observer.getConditionEvaluator().test(metric);
+                long evaluationEndTime = System.nanoTime();
+                long evaluationLatency = evaluationEndTime - evaluationStartTime;
+
+                // Existing: CONDITION_EVALUATION
+                LOG.info("CONDITION_EVALUATION|cycleId={}|event={}|service={}|observer={}|conditionMet={}|startTime={}|endTime={}|latencyNs={}",
+                        cycleId, name, serviceName, observer.getClass().getSimpleName(), conditionMet,
+                        evaluationStartTime, evaluationEndTime, evaluationLatency);
+
+                if (conditionMet) {
+
+                    long notificationStartTime = System.nanoTime();
+                    notifyObserver(observer, metric, cycleId);
+
+                    notifiedSubscribers++;
+                }
             }
+
+
+
+            long cycleEndTime = System.nanoTime();
+            long totalCycleLatency = cycleEndTime - collectionStartTime;
+
+            // Existing: ADAPTATION_CYCLE_COMPLETE
+            LOG.info("ADAPTATION_CYCLE_COMPLETE|cycleId={}|event={}|service={}|subscribersNotified={}|totalLatencyNs={}|endTime={}",
+                    cycleId, name, serviceName, notifiedSubscribers, totalCycleLatency, cycleEndTime);
+
+        } finally {
+            AdaptationCycleContext.clear();
         }
     }
 
-    /**
-     * Notifies all subscribed observers with the given metric value.
-     * <p>
-     * This method triggers an update to all observers, passing them the current
-     * metric value, which they can use to react to the change.
-     * </p>
-     *
-     * @param metricValue the new metric value to be sent to the observers.
-     */
     @Override
     public void notifyObservers(T metricValue) {
+        String cycleId = AdaptationCycleContext.getCurrentCycle();
+        long startTime = System.nanoTime();
         for (Observer<T> subscriber : subscribers) {
-            notifyObserver(subscriber, metricValue);
+            notifyObserver(subscriber, metricValue, cycleId);
         }
+        long endTime = System.nanoTime();
+        LOG.info("BULK_NOTIFICATION_COMPLETE|cycleId={}|event={}|service={}|subscribersCount={}|latencyNs={}",
+                cycleId, name, serviceName, subscribers.size(), endTime - startTime);
     }
 
-    /**
-     * Notifies a specific observer with the given metric value.
-     * <p>
-     * This method triggers an update to the specified observer only,
-     * passing the current metric value for its consideration.
-     * </p>
-     *
-     * @param observer  the observer to be notified.
-     * @param metricValue the new metric value to be sent to the observer.
-     */
     @Override
     public void notifyObserver(Observer<T> observer, T metricValue) {
-        observer.update(metricValue, "Handling " + this.name + " event");
+        notifyObserver(observer, metricValue, AdaptationCycleContext.getCurrentCycle());
     }
 
-    /**
-     * Returns the list of currently subscribed observers.
-     * <p>
-     * This method allows access to the list of subscribers for external use.
-     * </p>
-     *
-     * @return a list of observers currently subscribed to this event.
-     */
-    public List<Observer<T>> getSubscribers() {
-        return subscribers;
+    @Override
+    public void notifyObserver(Observer<T> observer, T metricValue, String cycleId, long notificationStartTime) {
+        long notificationEndTime = System.nanoTime();
+        long notificationLatency = notificationEndTime - notificationStartTime;
+        LOG.info("CONDITIONAL_OBSERVER_NOTIFICATION|cycleId={}|event={}|service={}|observer={}|startTime={}|endTime={}|latencyNs={}", cycleId, name, serviceName, observer.getClass().getSimpleName(), notificationStartTime, notificationEndTime, notificationLatency);
+        long startTime = System.nanoTime();
+        observer.update(metricValue, "Handling " + this.name + " event", cycleId);
+        long endTime = System.nanoTime();
+
+        LOG.info("OBSERVER_UPDATE_COMPLETE|cycleId={}|event={}|service={}|observer={}|latencyNs={}",
+                cycleId, name, serviceName, observer.getClass().getSimpleName(), endTime - startTime);
     }
 
+    public void notifyObserver(Observer<T> observer, T metricValue, String cycleId) {
+        long startTime = System.nanoTime();
+        observer.update(metricValue, "Handling " + this.name + " event", cycleId);
+        long endTime = System.nanoTime();
+
+        LOG.info("OBSERVER_UPDATE_COMPLETE|cycleId={}|event={}|service={}|observer={}|latencyNs={}",
+                cycleId, name, serviceName, observer.getClass().getSimpleName(), endTime - startTime);
+    }
+
+    public List<Observer<T>> getSubscribers() { return subscribers; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
 }
