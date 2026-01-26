@@ -15,7 +15,7 @@ package tools.spirals.cerberus237.adaptiflow.scanner;
 
 import org.junit.Assert;
 import org.junit.Test;
-import tools.spirals.cerberus237.adaptiflow.interfaces.IAdaptationAction;
+import tools.spirals.cerberus237.adaptationactionsbase.core.IAdaptationAction;
 
 import java.util.Map;
 

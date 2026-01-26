@@ -16,8 +16,9 @@ package tools.spirals.cerberus237.adaptiflow.subscriptions.subscribers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import tools.spirals.cerberus237.adaptiflow.interfaces.IAdaptationAction;
+import tools.spirals.cerberus237.adaptationactionsbase.core.IAdaptationAction;
 import tools.spirals.cerberus237.adaptiflow.operators.TrueEvaluator;
+import tools.spirals.cerberus237.adaptiflow.scanner.ExampleAction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +33,7 @@ public class EventCounterSubscriberTest {
     @Before
     public void setUp() {
         List<IAdaptationAction> actions = new ArrayList<>();
-        actions.add(() -> System.out.println("Action performed!")); // Test action
+        actions.add(new ExampleAction(() -> System.out.println("Action performed!"))); // Test action
         counterSubscriber = new EventCounterSubscriber<Double>(actions, new TrueEvaluator<>(), 3);
     }
 

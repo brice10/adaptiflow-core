@@ -14,7 +14,7 @@
 package tools.spirals.cerberus237.adaptiflow.subscriptions.subscribers;
 
 import tools.spirals.cerberus237.adaptiflow.interfaces.ConditionEvaluator;
-import tools.spirals.cerberus237.adaptiflow.interfaces.IAdaptationAction;
+import tools.spirals.cerberus237.adaptationactionsbase.core.IAdaptationAction;
 import tools.spirals.cerberus237.adaptiflow.interfaces.Observer;
 
 import java.util.List;

@@ -13,13 +13,61 @@
  */
 package tools.spirals.cerberus237.adaptiflow.scanner;
 
-import tools.spirals.cerberus237.adaptiflow.interfaces.IAdaptationAction;
+import tools.spirals.cerberus237.adaptationactionsbase.core.IAdaptationAction;
+import tools.spirals.cerberus237.adaptationactionsbase.enums.AdaptationActionResult;
 
 /**
  *
  * @author Arléon Zemtsop (Cerberus)
  */
 public class ExampleAction implements IAdaptationAction {
+
+    private final String actionId;
+    private final Runnable action;
+    private boolean performed = false;
+
+    public ExampleAction(String actionId, Runnable action) {
+        this.actionId = actionId;
+        this.action = action;
+    }
+
+    public ExampleAction(Runnable action) {
+        this("test-action-" + System.currentTimeMillis(), action);
+    }
+
     @Override
-    public void perform() {}
+    public AdaptationActionResult perform() {
+        action.run();
+        performed = true;
+        return AdaptationActionResult.SUCCESS;
+    }
+
+    @Override
+    public String getActionId() {
+        return actionId;
+    }
+
+    @Override
+    public String getDescription() {
+        return "Test action: " + actionId;
+    }
+
+    @Override
+    public boolean canPerform() {
+        return true;
+    }
+
+    @Override
+    public AdaptationActionResult rollback() {
+        return AdaptationActionResult.NOT_SUPPORTED;
+    }
+
+    @Override
+    public boolean supportsRollback() {
+        return false;
+    }
+
+    public boolean wasPerformed() {
+        return performed;
+    }
 }

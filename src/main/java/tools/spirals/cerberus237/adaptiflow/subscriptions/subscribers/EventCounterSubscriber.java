@@ -16,7 +16,7 @@ package tools.spirals.cerberus237.adaptiflow.subscriptions.subscribers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.spirals.cerberus237.adaptiflow.interfaces.ConditionEvaluator;
-import tools.spirals.cerberus237.adaptiflow.interfaces.IAdaptationAction;
+import tools.spirals.cerberus237.adaptationactionsbase.core.IAdaptationAction;
 import tools.spirals.cerberus237.adaptiflow.operators.TrueEvaluator;
 
 import java.util.List;

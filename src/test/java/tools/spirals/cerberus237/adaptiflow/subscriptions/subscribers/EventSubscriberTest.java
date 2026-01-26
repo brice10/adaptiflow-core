@@ -16,7 +16,8 @@ package tools.spirals.cerberus237.adaptiflow.subscriptions.subscribers;
 import org.junit.Assert;
 import org.junit.Test;
 import tools.spirals.cerberus237.adaptiflow.interfaces.ConditionEvaluator;
-import tools.spirals.cerberus237.adaptiflow.interfaces.IAdaptationAction;
+import tools.spirals.cerberus237.adaptiflow.scanner.ExampleAction;
+import tools.spirals.cerberus237.adaptationactionsbase.core.IAdaptationAction;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -44,7 +45,7 @@ public class EventSubscriberTest {
     @Before
     public void setUp() {
         actions = new ArrayList<>();
-        actions.add(() -> System.out.println("Action performed!")); // Test action
+        actions.add(new ExampleAction(() -> System.out.println("Action performed!"))); // Test action
         conditionEvaluator = new TestConditionEvaluator();
         subscriber = new EventSubscriber<>(actions, conditionEvaluator);
     }

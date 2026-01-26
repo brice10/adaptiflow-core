@@ -11,8 +11,6 @@
 	<properties>
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<slf4j.version>2.0.0</slf4j.version>
 	</properties>
 
 	<licenses>
@@ -45,26 +43,10 @@
 			<artifactId>metricscollectorbase</artifactId>
 			<version>0.0.1</version>
 		</dependency>
-
-		<!-- JavaEE Dependencies -->
 		<dependency>
-			<groupId>jakarta.platform</groupId>
-			<artifactId>jakarta.jakartaee-api</artifactId>
-			<version>9.0.0</version>
-			<scope>provided</scope>
-		</dependency>
-
-
-		<!-- Logging framework also used by ribbon -->
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>${slf4j.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-simple</artifactId>
-			<version>${slf4j.version}</version>
+			<groupId>io.github.brice10</groupId>
+			<artifactId>adaptationactionsbase</artifactId>
+			<version>0.0.1</version>
 		</dependency>
 
 		<dependency>
