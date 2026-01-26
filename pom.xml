@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.github.brice10</groupId>
 	<artifactId>adaptiflow</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 	<packaging>jar</packaging>
 	<name>AdaptiFlow</name>
 	<description>AdaptiFlow: an Extensible Framework for Event-Driven Autonomy in Cloud Microservices</description>
@@ -41,12 +41,12 @@
 		<dependency>
 			<groupId>io.github.brice10</groupId>
 			<artifactId>metricscollectorbase</artifactId>
-			<version>0.0.1</version>
+			<version>1.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.brice10</groupId>
 			<artifactId>adaptationactionsbase</artifactId>
-			<version>0.0.1</version>
+			<version>1.0.1</version>
 		</dependency>
 
 		<dependency>
