@@ -57,16 +57,6 @@ public class ExampleAction implements IAdaptationAction {
         return true;
     }
 
-    @Override
-    public AdaptationActionResult rollback() {
-        return AdaptationActionResult.NOT_SUPPORTED;
-    }
-
-    @Override
-    public boolean supportsRollback() {
-        return false;
-    }
-
     public boolean wasPerformed() {
         return performed;
     }
